@@ -1,4 +1,4 @@
-# Modelar-Postgres-Adapter
+# Modelar-Ibmdb-Adapter
 
 **This is an adapter for [Modelar](http://modelar.hyurl.com) to connect**
 **DB2 database.**
