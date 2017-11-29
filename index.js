@@ -127,7 +127,7 @@ class IbmdbAdapter extends Adapter {
             this.connection.close();
     }
 
-    static close() {
+    closeAll() {
         for (let i in Pools) {
             Pools[i].close();
             delete Pools[i];
