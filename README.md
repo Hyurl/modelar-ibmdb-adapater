@@ -7,7 +7,7 @@
 
 ```javascript
 const { DB } = require("modelar");
-const IbmdbAdapter = require("./");
+const IbmdbAdapter = require("modelar-ibmdb-adpater");
 
 DB.setAdapter("ibmdb", IbmdbAdapter).init({
     type: "ibmdb",
