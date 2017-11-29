@@ -24,3 +24,8 @@ DB.setAdapter("ibmdb", IbmdbAdapter).init({
     password: "******"
 });
 ```
+
+## Warning
+
+DB2 database transfers identifiers to UPPER-CASE by default, but with this 
+adapter, they will keep the form of which they're defined.
