@@ -3,6 +3,12 @@
 **This is an adapter for [Modelar](http://modelar.hyurl.com) to connect**
 **DB2 database.**
 
+## Install
+
+```sh
+npm install modelar-ibmdb-adpater
+```
+
 ## How To Use
 
 ```javascript
