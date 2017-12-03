@@ -13,7 +13,7 @@ npm install modelar-ibmdb-adpater
 
 ```javascript
 const { DB } = require("modelar");
-const IbmdbAdapter = require("modelar-ibmdb-adpater");
+const IbmdbAdapter = require("modelar-ibmdb-adapter");
 
 DB.setAdapter("ibmdb", IbmdbAdapter).init({
     type: "ibmdb",
