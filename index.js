@@ -119,8 +119,8 @@ class IbmdbAdapter extends Adapter {
     }
 
     release() {
+        this.close();
         this.connection = null;
-        return this.close();
     }
 
     close() {
