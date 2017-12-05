@@ -6,7 +6,7 @@
 ## Install
 
 ```sh
-npm install modelar-ibmdb-adpater
+npm install modelar-ibmdb-adapter
 ```
 
 ## How To Use

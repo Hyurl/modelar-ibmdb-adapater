@@ -1,6 +1,6 @@
 {
     "name": "modelar-ibmdb-adapter",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "description": "An adapter for Modelar to connect DB2 database.",
     "main": "index.js",
     "scripts": {
