@@ -24,6 +24,6 @@
     "license": "MIT",
     "dependencies": {
         "ibm_db": "^2.2.1",
-        "modelar": "^2.0.0"
+        "modelar": "^2.1.0"
     }
 }
