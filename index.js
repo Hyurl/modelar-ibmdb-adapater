@@ -30,11 +30,6 @@ class IbmdbAdapter extends Adapter {
     }
 
     query(db, sql, bindings) {
-        if (this.connection === null) {
-            return this.connect(db).then(db => {
-                return this.query(db, sql, bindings);
-            });
-        }
         var affectCommands = ["insert", "update", "delete"],
             affected = false;
         return new Promise((resolve, reject) => {
@@ -57,7 +52,7 @@ class IbmdbAdapter extends Adapter {
                             if (err) {
                                 reject(err);
                             } else {
-                                db.insertId = ~~rows[0][1];
+                                db.insertId = parseInt(rows[0][1]);
                                 resolve(db);
                             }
                         });
@@ -81,7 +76,12 @@ class IbmdbAdapter extends Adapter {
         });
         if (typeof callback == "function") {
             return promise.then(db => {
-                return callback.call(db, db);
+                let res = callback.call(db, db);
+                if (res.then instanceof Function) {
+                    return res.then(() => db);
+                } else {
+                    return db;
+                }
             }).then(db => {
                 return this.commit(db);
             }).catch(err => {
@@ -128,7 +128,7 @@ class IbmdbAdapter extends Adapter {
             this.connection.close();
     }
 
-    closeAll() {
+    static close() {
         for (let i in Pools) {
             Pools[i].close();
             delete Pools[i];
@@ -155,10 +155,10 @@ class IbmdbAdapter extends Adapter {
                 autoIncrement = null;
             }
             if (field.length instanceof Array) {
-                field.length = field.length.join(",");
-            }
-            if (field.length)
+                field.type += "(" + field.length.join(",") + ")";
+            } else if (field.length) {
                 field.type += "(" + field.length + ")";
+            }
 
             let column = table.backquote(field.name) + " " + field.type;
 
@@ -198,9 +198,7 @@ class IbmdbAdapter extends Adapter {
         if (foreigns.length)
             sql += ",\n\t" + foreigns.join(",\n\t");
 
-        sql += "\n)";
-
-        return sql;
+        return sql + "\n)";
     }
 
     /** Methods for Query */
@@ -217,7 +215,6 @@ class IbmdbAdapter extends Adapter {
     getSelectSQL(query) {
         var isCount = (/count\(distinct\s\S+\)/i).test(query._selects),
             orderBy = query._orderBy ? `order by ${query._orderBy}` : "",
-            where = query._where ? ` where ${query._where}` : "",
             paginated = query._limit instanceof Array,
             sql = "select ";
 
@@ -250,4 +247,4 @@ class IbmdbAdapter extends Adapter {
     }
 }
 
-module.exports = new IbmdbAdapter;
+module.exports = IbmdbAdapter;
