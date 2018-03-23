@@ -1,24 +1,23 @@
-const { Pool } = require("ibm_db");
-const { Adapter } = require("modelar");
-const Pools = {};
+import { Adapter, DB, Table, Query } from "modelar";
+import { Pool, Database } from "ibm_db";
 
-class IbmdbAdapter extends Adapter {
-    constructor() {
-        super();
-        this.backquote = "\"";
-    }
+export class IbmdbAdapter extends Adapter {
+    connection: Database;
+    backquote = "\"";
 
-    /** Methods for DB */
+    static readonly Pools: { [dsn: string]: Pool } = {};
 
-    connect(db) {
-        var { database, host, port, user, password, max } = db._config;
-        var constr = `DATABASE=${database};HOSTNAME=${host};PORT=${port};PROTOCOL=TCPIP;UID=${user};PWD=${password}`;
-        if (Pools[db._dsn] === undefined) {
-            Pools[db._dsn] = new Pool();
-            Pools[db._dsn].setMaxPoolSize(max);
+    connect(db: DB): Promise<DB> {
+        let { database, host, port, user, password, max } = db.config;
+        let constr = `DATABASE=${database};HOSTNAME=${host};PORT=${port};PROTOCOL=TCPIP;UID=${user};PWD=${password}`;
+
+        if (IbmdbAdapter.Pools[db.dsn] === undefined) {
+            IbmdbAdapter.Pools[db.dsn] = new Pool();
+            IbmdbAdapter.Pools[db.dsn].setMaxPoolSize(max);
         }
+
         return new Promise((resolve, reject) => {
-            Pools[db._dsn].open(constr, (err, connection) => {
+            IbmdbAdapter.Pools[db.dsn].open(constr, (err, connection) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -29,14 +28,17 @@ class IbmdbAdapter extends Adapter {
         });
     }
 
-    query(db, sql, bindings) {
+    query(db: DB, sql: string, bindings?: any[]): Promise<DB> {
         var affectCommands = ["insert", "update", "delete"],
             affected = false;
+
         return new Promise((resolve, reject) => {
-            if (affectCommands.includes(db._command)) {
-                sql = `select count(*) as COUNT from new table (${sql})`;
+            if (affectCommands.includes(db.command)) {
+                let middle = db.command == "delete" ? "old" : "new";
+                sql = `select count(*) as COUNT from ${middle} table (${sql})`;
                 affected = true;
             }
+
             this.connection.query(sql, bindings, (err, rows) => {
                 if (err) {
                     reject(err);
@@ -44,18 +46,22 @@ class IbmdbAdapter extends Adapter {
                     if (affected) {
                         db.affectedRows = rows[0].COUNT;
                     } else {
-                        db._data = rows;
+                        db.data = rows;
                         db.affectedRows = rows.length;
                     }
-                    if (db._command === "insert") {
-                        this.connection.query("select identity_val_local() from SYSIBM.SYSDUMMY1", [], (err, rows) => {
-                            if (err) {
-                                reject(err);
-                            } else {
-                                db.insertId = parseInt(rows[0][1]);
-                                resolve(db);
+
+                    if (db.command === "insert") {
+                        this.connection.query(
+                            "select identity_val_local() from SYSIBM.SYSDUMMY1",
+                            (err, rows) => {
+                                if (err) {
+                                    reject(err);
+                                } else {
+                                    db.insertId = parseInt(rows[0][1]);
+                                    resolve(db);
+                                }
                             }
-                        });
+                        );
                     } else {
                         resolve(db);
                     }
@@ -64,8 +70,8 @@ class IbmdbAdapter extends Adapter {
         });
     }
 
-    transaction(db, callback = null) {
-        var promise = new Promise((resolve, reject) => {
+    transaction(db: DB, cb: (db: DB) => void): Promise<DB> {
+        var promise = new Promise((resolve: (db: DB) => void, reject) => {
             this.connection.beginTransaction(err => {
                 if (err) {
                     reject(err);
@@ -74,11 +80,13 @@ class IbmdbAdapter extends Adapter {
                 }
             });
         });
-        if (typeof callback == "function") {
+
+        if (typeof cb == "function") {
             return promise.then(db => {
-                let res = callback.call(db, db);
+                var res = cb.call(db, db);
+
                 if (res.then instanceof Function) {
-                    return res.then(() => db);
+                    return res.then(() => db) as Promise<DB>;
                 } else {
                     return db;
                 }
@@ -94,7 +102,7 @@ class IbmdbAdapter extends Adapter {
         }
     }
 
-    commit(db) {
+    commit(db: DB): Promise<DB> {
         return new Promise((resolve, reject) => {
             this.connection.commitTransaction(err => {
                 if (err) {
@@ -106,7 +114,7 @@ class IbmdbAdapter extends Adapter {
         });
     }
 
-    rollback(db) {
+    rollback(db: DB): Promise<DB> {
         return new Promise((resolve, reject) => {
             this.connection.rollbackTransaction(err => {
                 if (err) {
@@ -118,42 +126,45 @@ class IbmdbAdapter extends Adapter {
         });
     }
 
-    release() {
+    release(): void {
         this.close();
-        this.connection = null;
+        // this.connection = null;
     }
 
-    close() {
-        if (this.connection)
+    close(): void {
+        if (this.connection) {
             this.connection.close();
-    }
-
-    static close() {
-        for (let i in Pools) {
-            Pools[i].close();
-            delete Pools[i];
+            this.connection = null;
         }
     }
 
-    /** Methods for Table */
+    static close(): void {
+        for (let i in IbmdbAdapter.Pools) {
+            IbmdbAdapter.Pools[i].close(() => null);
+            delete IbmdbAdapter.Pools[i];
+        }
+    }
 
-    getDDL(table) {
-        var numbers = ["int", "integer"],
-            columns = [],
-            foreigns = [],
-            primary,
-            autoIncrement,
-            sql;
+    getDDL(table: Table) {
+        let numbers = ["int", "integer"],
+            columns: string[] = [],
+            foreigns: string[] = [];
+        let primary: string;
+        let autoIncrement: string;
 
-        for (let field of table._fields) {
+        for (let key in table.schema) {
+            let field = table.schema[key];
+
             if (field.primary && field.autoIncrement) {
                 if (!numbers.includes(field.type.toLowerCase())) {
                     field.type = "int";
                 }
+
                 autoIncrement = ` generated always as identity (start with ${field.autoIncrement[0]}, increment by ${field.autoIncrement[1]})`;
             } else {
                 autoIncrement = null;
             }
+
             if (field.length instanceof Array) {
                 field.type += "(" + field.length.join(",") + ")";
             } else if (field.length) {
@@ -164,32 +175,41 @@ class IbmdbAdapter extends Adapter {
 
             if (field.primary)
                 primary = field.name;
+
             if (field.default === null)
                 column += " default null";
             else if (field.default !== undefined)
                 column += " default " + table.quote(field.default);
+
             if (field.notNull)
                 column += " not null";
+
             if (field.unsigned)
                 column += " unsigned";
+
             if (field.unique)
                 column += " unique";
+
             if (field.comment)
                 column += " comment " + table.quote(field.comment);
+
             if (autoIncrement)
                 column += autoIncrement;
+
             if (field.foreignKey.table) {
                 let foreign = `foreign key (${table.backquote(field.name)})` +
                     " references " + table.backquote(field.foreignKey.table) +
                     " (" + table.backquote(field.foreignKey.field) + ")" +
                     " on delete " + field.foreignKey.onDelete +
                     " on update " + field.foreignKey.onUpdate;
+
                 foreigns.push(foreign);
             };
+
             columns.push(column);
         }
 
-        sql = "create table " + table.backquote(table._table) +
+        let sql = "create table " + table.backquote(table.name) +
             " (\n\t" + columns.join(",\n\t");
 
         if (primary)
@@ -203,48 +223,56 @@ class IbmdbAdapter extends Adapter {
 
     /** Methods for Query */
 
-    limit(query, length, offset = 0) {
-        if (offset === 0) {
-            query._limit = length;
+    limit(query: Query, length: number, offset?: number): Query {
+        if (!offset) {
+            query["_limit"] = length;
         } else {
-            query._limit = [offset, length];
+            query["_limit"] = [offset, length];
         }
         return query;
     }
 
-    getSelectSQL(query) {
-        var isCount = (/count\(distinct\s\S+\)/i).test(query._selects),
-            orderBy = query._orderBy ? `order by ${query._orderBy}` : "",
-            paginated = query._limit instanceof Array,
-            sql = "select ";
+    getSelectSQL(query: Query): string {
+        let selects: string = query["_selects"];
+        let distinct: string = query["_distinct"];
+        let join: string = query["_join"];
+        let where: string = query["_where"];
+        let orderBy: string = query["_orderBy"];
+        let groupBy: string = query["_groupBy"];
+        let having: string = query["_having"];
+        let union: string = query["_union"];
+        let limit: number | [number, number] = <any>query["_limit"];
+        let isCount = (/count\(distinct\s\S+\)/i).test(selects);
+        let paginated = limit instanceof Array;
 
-        sql += (query._distinct && !isCount ? "distinct " : "") + `${query._selects}`;
+        distinct = distinct && !isCount ? "distinct " : "";
+        where = where ? ` where ${where}` : "";
+        orderBy = orderBy ? `order by ${orderBy}` : "";
+        groupBy = groupBy ? ` group by ${groupBy}` : "";
+        having = having ? ` having ${having}` : "";
+        union = union ? ` union ${union}` : "";
+
+        let sql = "select " + distinct + selects;
 
         if (paginated)
             sql += `, row_number() over(${orderBy}) rn`;
 
         sql += " from " +
-            (!query._join ? query.backquote(query._table) : "") +
-            query._join +
-            (query._where ? " where " + query._where : "");
+            (!join ? query.backquote(query.table) : "") + join + where;
 
         if (!paginated && orderBy)
             sql += ` ${orderBy}`;
 
-        sql += (query._groupBy ? " group by " + query._groupBy : "") +
-            (query._having ? "having " + query._having : "");
+        sql += groupBy + having;
 
-        if (query._limit) {
-            if (paginated)
-                sql = `select * from (${sql}) tmp where tmp.rn > ${query._limit[0]} and tmp.rn <= ${query._limit[0] + query._limit[1]}`;
-            else
-                sql += ` fetch first ${query._limit} rows only`;
+        if (limit) {
+            if (paginated) {
+                sql = `select * from (${sql}) tmp where tmp.rn > ${limit[0]} and tmp.rn <= ${limit[0] + limit[1]}`;
+            } else {
+                sql += ` fetch first ${limit} rows only`;
+            }
         }
 
-        if (query._union)
-            sql += ` union ${query._union}`;
-        return sql;
+        return sql += union;
     }
 }
-
-module.exports = IbmdbAdapter;

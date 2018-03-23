@@ -1,5 +1,5 @@
 const { DB, Table, User } = require("modelar");
-const IbmdbAdapter = require("./");
+const { IbmdbAdapter } = require("./");
 
 DB.setAdapter("ibmdb", IbmdbAdapter).init({
     type: "ibmdb",
@@ -7,7 +7,7 @@ DB.setAdapter("ibmdb", IbmdbAdapter).init({
     host: "127.0.0.1",
     port: 50000,
     user: "db2admin",
-    password: "******"
+    password: "161301"
 });
 
 DB.on("query", (db) => {

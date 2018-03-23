@@ -1,19 +1,26 @@
 # Modelar-Ibmdb-Adapter
 
-**This is an adapter for [Modelar](http://modelar.hyurl.com) to connect**
-**DB2 database.**
+**This is an adapter for [Modelar](https://github.com/hyurl/modelar) to** 
+**connect DB2 database.**
 
 ## Install
 
 ```sh
-npm install modelar-ibmdb-adapter
+npm install modelar-ibmdb-adapter --save
+```
+
+The above command will install the latest version for Modelar 3.0+, if you're 
+using Modelar 2.X, use the following command instead:
+
+```sh
+npm install modelar-ibmdb-adapter --tag modelar2 --save
 ```
 
 ## How To Use
 
 ```javascript
 const { DB } = require("modelar");
-const IbmdbAdapter = require("modelar-ibmdb-adapter");
+const { IbmdbAdapter } = require("modelar-ibmdb-adapter");
 
 DB.setAdapter("ibmdb", IbmdbAdapter).init({
     type: "ibmdb",

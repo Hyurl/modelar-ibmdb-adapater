@@ -1,8 +1,9 @@
 {
     "name": "modelar-ibmdb-adapter",
-    "version": "0.2.0",
+    "version": "3.0.0",
     "description": "An adapter for Modelar to connect DB2 database.",
-    "main": "index.js",
+    "main": "dist/index.js",
+    "types": "src/index.ts",
     "scripts": {
         "test": "node test"
     },
@@ -15,7 +16,7 @@
     "author": {
         "name": "Ayon Lee",
         "email": "i@hyurl.com",
-        "url": "hyurl.com"
+        "url": "http://hyurl.com"
     },
     "repository": {
         "type": "git",
@@ -23,7 +24,8 @@
     },
     "license": "MIT",
     "dependencies": {
+        "@types/ibm_db": "^2.0.2",
         "ibm_db": "^2.2.1",
-        "modelar": "^2.1.0"
+        "modelar": "^3.0.0"
     }
 }
