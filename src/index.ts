@@ -1,5 +1,24 @@
-import { Adapter, DB, Table, Query } from "modelar";
+import { Adapter, DB, Table, Query, DBConfig } from "modelar";
 import { Pool, Database } from "ibm_db";
+
+function getConnectionString(config: DBConfig): string {
+    let pairs = [],
+        map = {
+            database: "DATABASE",
+            protocol: "PROTOCOL",
+            host: "HOSTNAME",
+            port: "PORT",
+            user: "UID",
+            password: "PASSWORD",
+        };
+
+    for (let key in map) {
+        if (config[key])
+            pairs.push(map[key] + "=" + config[key]);
+    }
+
+    return pairs.join(";");
+}
 
 export class IbmdbAdapter extends Adapter {
     connection: Database;
@@ -8,12 +27,12 @@ export class IbmdbAdapter extends Adapter {
     static readonly Pools: { [dsn: string]: Pool } = {};
 
     connect(db: DB): Promise<DB> {
-        let { database, host, port, user, password, max } = db.config;
-        let constr = `DATABASE=${database};HOSTNAME=${host};PORT=${port};PROTOCOL=TCPIP;UID=${user};PWD=${password}`;
+        let constr = db.config["connectionString"] || getConnectionString(db.config);
 
         if (IbmdbAdapter.Pools[db.dsn] === undefined) {
             IbmdbAdapter.Pools[db.dsn] = new Pool();
-            IbmdbAdapter.Pools[db.dsn].setMaxPoolSize(max);
+            IbmdbAdapter.Pools[db.dsn].setMaxPoolSize(db.config.max);
+            IbmdbAdapter.Pools[db.dsn].setConnectTimeout(db.config.timeout);
         }
 
         return new Promise((resolve, reject) => {

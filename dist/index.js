@@ -2,17 +2,32 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const modelar_1 = require("modelar");
 const ibm_db_1 = require("ibm_db");
+function getConnectionString(config) {
+    let pairs = [], map = {
+        database: "DATABASE",
+        protocol: "PROTOCOL",
+        host: "HOSTNAME",
+        port: "PORT",
+        user: "UID",
+        password: "PASSWORD",
+    };
+    for (let key in map) {
+        if (config[key])
+            pairs.push(map[key] + "=" + config[key]);
+    }
+    return pairs.join(";");
+}
 class IbmdbAdapter extends modelar_1.Adapter {
     constructor() {
         super(...arguments);
         this.backquote = "\"";
     }
     connect(db) {
-        let { database, host, port, user, password, max } = db.config;
-        let constr = `DATABASE=${database};HOSTNAME=${host};PORT=${port};PROTOCOL=TCPIP;UID=${user};PWD=${password}`;
+        let constr = db.config["connectionString"] || getConnectionString(db.config);
         if (IbmdbAdapter.Pools[db.dsn] === undefined) {
             IbmdbAdapter.Pools[db.dsn] = new ibm_db_1.Pool();
-            IbmdbAdapter.Pools[db.dsn].setMaxPoolSize(max);
+            IbmdbAdapter.Pools[db.dsn].setMaxPoolSize(db.config.max);
+            IbmdbAdapter.Pools[db.dsn].setConnectTimeout(db.config.timeout);
         }
         return new Promise((resolve, reject) => {
             IbmdbAdapter.Pools[db.dsn].open(constr, (err, connection) => {
