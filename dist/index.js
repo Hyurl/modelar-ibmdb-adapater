@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const modelar_1 = require("modelar");
-const ibm_db_1 = require("ibm_db");
+var tslib_1 = require("tslib");
+var modelar_1 = require("modelar");
+var ibm_db_1 = require("ibm_db");
 function getConnectionString(config) {
-    let pairs = [], map = {
+    var pairs = [], map = {
         database: "DATABASE",
         protocol: "PROTOCOL",
         host: "HOSTNAME",
@@ -11,45 +12,49 @@ function getConnectionString(config) {
         user: "UID",
         password: "PASSWORD",
     };
-    for (let key in map) {
+    for (var key in map) {
         if (config[key])
             pairs.push(map[key] + "=" + config[key]);
     }
     return pairs.join(";");
 }
-class IbmdbAdapter extends modelar_1.Adapter {
-    constructor() {
-        super(...arguments);
-        this.backquote = "\"";
+var IbmdbAdapter = (function (_super) {
+    tslib_1.__extends(IbmdbAdapter, _super);
+    function IbmdbAdapter() {
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this.backquote = "\"";
+        return _this;
     }
-    connect(db) {
-        let constr = db.config["connectionString"] || getConnectionString(db.config);
+    IbmdbAdapter.prototype.connect = function (db) {
+        var _this = this;
+        var constr = db.config["connectionString"] || getConnectionString(db.config);
         if (IbmdbAdapter.Pools[db.dsn] === undefined) {
             IbmdbAdapter.Pools[db.dsn] = new ibm_db_1.Pool();
             IbmdbAdapter.Pools[db.dsn].setMaxPoolSize(db.config.max);
             IbmdbAdapter.Pools[db.dsn].setConnectTimeout(db.config.timeout);
         }
-        return new Promise((resolve, reject) => {
-            IbmdbAdapter.Pools[db.dsn].open(constr, (err, connection) => {
+        return new Promise(function (resolve, reject) {
+            IbmdbAdapter.Pools[db.dsn].open(constr, function (err, connection) {
                 if (err) {
                     reject(err);
                 }
                 else {
-                    this.connection = connection;
+                    _this.connection = connection;
                     resolve(db);
                 }
             });
         });
-    }
-    query(db, sql, bindings) {
+    };
+    IbmdbAdapter.prototype.query = function (db, sql, bindings) {
+        var _this = this;
         var affectCommands = ["insert", "update", "delete"], affected = false;
-        return new Promise((resolve, reject) => {
-            if (affectCommands.includes(db.command)) {
-                let middle = db.command == "delete" ? "old" : "new";
-                sql = `select count(*) as COUNT from ${middle} table (${sql})`;
+        return new Promise(function (resolve, reject) {
+            if (affectCommands.indexOf(db.command) >= 0) {
+                var middle = db.command == "delete" ? "old" : "new";
+                sql = "select count(*) as COUNT from " + middle + " table (" + sql + ")";
                 affected = true;
             }
-            this.connection.query(sql, bindings, (err, rows) => {
+            _this.connection.query(sql, bindings, function (err, rows) {
                 if (err) {
                     reject(err);
                 }
@@ -62,7 +67,7 @@ class IbmdbAdapter extends modelar_1.Adapter {
                         db.affectedRows = rows.length;
                     }
                     if (db.command === "insert") {
-                        this.connection.query("select identity_val_local() from SYSIBM.SYSDUMMY1", (err, rows) => {
+                        _this.connection.query("select identity_val_local() from SYSIBM.SYSDUMMY1", function (err, rows) {
                             if (err) {
                                 reject(err);
                             }
@@ -78,10 +83,11 @@ class IbmdbAdapter extends modelar_1.Adapter {
                 }
             });
         });
-    }
-    transaction(db, cb) {
-        var promise = new Promise((resolve, reject) => {
-            this.connection.beginTransaction(err => {
+    };
+    IbmdbAdapter.prototype.transaction = function (db, cb) {
+        var _this = this;
+        var promise = new Promise(function (resolve, reject) {
+            _this.connection.beginTransaction(function (err) {
                 if (err) {
                     reject(err);
                 }
@@ -91,18 +97,18 @@ class IbmdbAdapter extends modelar_1.Adapter {
             });
         });
         if (typeof cb == "function") {
-            return promise.then(db => {
+            return promise.then(function (db) {
                 var res = cb.call(db, db);
                 if (res.then instanceof Function) {
-                    return res.then(() => db);
+                    return res.then(function () { return db; });
                 }
                 else {
                     return db;
                 }
-            }).then(db => {
-                return this.commit(db);
-            }).catch(err => {
-                return this.rollback(db).then(db => {
+            }).then(function (db) {
+                return _this.commit(db);
+            }).catch(function (err) {
+                return _this.rollback(db).then(function (db) {
                     throw err;
                 });
             });
@@ -110,10 +116,11 @@ class IbmdbAdapter extends modelar_1.Adapter {
         else {
             return promise;
         }
-    }
-    commit(db) {
-        return new Promise((resolve, reject) => {
-            this.connection.commitTransaction(err => {
+    };
+    IbmdbAdapter.prototype.commit = function (db) {
+        var _this = this;
+        return new Promise(function (resolve, reject) {
+            _this.connection.commitTransaction(function (err) {
                 if (err) {
                     reject(err);
                 }
@@ -122,10 +129,11 @@ class IbmdbAdapter extends modelar_1.Adapter {
                 }
             });
         });
-    }
-    rollback(db) {
-        return new Promise((resolve, reject) => {
-            this.connection.rollbackTransaction(err => {
+    };
+    IbmdbAdapter.prototype.rollback = function (db) {
+        var _this = this;
+        return new Promise(function (resolve, reject) {
+            _this.connection.rollbackTransaction(function (err) {
                 if (err) {
                     reject(err);
                 }
@@ -134,62 +142,63 @@ class IbmdbAdapter extends modelar_1.Adapter {
                 }
             });
         });
-    }
-    release() {
+    };
+    IbmdbAdapter.prototype.release = function () {
         this.close();
-    }
-    close() {
+    };
+    IbmdbAdapter.prototype.close = function () {
         if (this.connection) {
             this.connection.close();
             this.connection = null;
         }
-    }
-    static close() {
-        for (let i in IbmdbAdapter.Pools) {
-            IbmdbAdapter.Pools[i].close(() => null);
+    };
+    IbmdbAdapter.close = function () {
+        for (var i in IbmdbAdapter.Pools) {
+            IbmdbAdapter.Pools[i].close(function () { return null; });
             delete IbmdbAdapter.Pools[i];
         }
-    }
-    getDDL(table) {
-        let numbers = ["int", "integer"], columns = [], foreigns = [];
-        let primary;
-        let autoIncrement;
-        for (let key in table.schema) {
-            let field = table.schema[key];
+    };
+    IbmdbAdapter.prototype.getDDL = function (table) {
+        var numbers = ["int", "integer"], columns = [], foreigns = [];
+        var primary;
+        var autoIncrement;
+        for (var key in table.schema) {
+            var field = table.schema[key];
             if (field.primary && field.autoIncrement) {
-                if (!numbers.includes(field.type.toLowerCase())) {
+                if (numbers.indexOf(field.type.toLowerCase()) === -1) {
                     field.type = "int";
                 }
-                autoIncrement = ` generated always as identity (start with ${field.autoIncrement[0]}, increment by ${field.autoIncrement[1]})`;
+                autoIncrement = " generated always as identity (start with " + field.autoIncrement[0] + ", increment by " + field.autoIncrement[1] + ")";
             }
             else {
                 autoIncrement = null;
             }
+            var type = field.type;
             if (field.length instanceof Array) {
-                field.type += "(" + field.length.join(",") + ")";
+                type += "(" + field.length.join(",") + ")";
             }
             else if (field.length) {
-                field.type += "(" + field.length + ")";
+                type += "(" + field.length + ")";
             }
-            let column = table.backquote(field.name) + " " + field.type;
+            var column = table.backquote(field.name) + " " + type;
             if (field.primary)
                 primary = field.name;
+            if (field.unique)
+                column += " unique";
+            if (field.unsigned)
+                column += " unsigned";
+            if (field.notNull)
+                column += " not null";
             if (field.default === null)
                 column += " default null";
             else if (field.default !== undefined)
                 column += " default " + table.quote(field.default);
-            if (field.notNull)
-                column += " not null";
-            if (field.unsigned)
-                column += " unsigned";
-            if (field.unique)
-                column += " unique";
             if (field.comment)
                 column += " comment " + table.quote(field.comment);
             if (autoIncrement)
                 column += autoIncrement;
-            if (field.foreignKey.table) {
-                let foreign = `foreign key (${table.backquote(field.name)})` +
+            if (field.foreignKey && field.foreignKey.table) {
+                var foreign = "foreign key (" + table.backquote(field.name) + ")" +
                     " references " + table.backquote(field.foreignKey.table) +
                     " (" + table.backquote(field.foreignKey.field) + ")" +
                     " on delete " + field.foreignKey.onDelete +
@@ -199,15 +208,15 @@ class IbmdbAdapter extends modelar_1.Adapter {
             ;
             columns.push(column);
         }
-        let sql = "create table " + table.backquote(table.name) +
+        var sql = "create table " + table.backquote(table.name) +
             " (\n\t" + columns.join(",\n\t");
         if (primary)
-            sql += ",\n\tprimary key(" + table.backquote(primary) + ")";
+            sql += ",\n\tprimary key (" + table.backquote(primary) + ")";
         if (foreigns.length)
             sql += ",\n\t" + foreigns.join(",\n\t");
         return sql + "\n)";
-    }
-    limit(query, length, offset) {
+    };
+    IbmdbAdapter.prototype.limit = function (query, length, offset) {
         if (!offset) {
             query["_limit"] = length;
         }
@@ -215,44 +224,45 @@ class IbmdbAdapter extends modelar_1.Adapter {
             query["_limit"] = [offset, length];
         }
         return query;
-    }
-    getSelectSQL(query) {
-        let selects = query["_selects"];
-        let distinct = query["_distinct"];
-        let join = query["_join"];
-        let where = query["_where"];
-        let orderBy = query["_orderBy"];
-        let groupBy = query["_groupBy"];
-        let having = query["_having"];
-        let union = query["_union"];
-        let limit = query["_limit"];
-        let isCount = (/count\(distinct\s\S+\)/i).test(selects);
-        let paginated = limit instanceof Array;
+    };
+    IbmdbAdapter.prototype.getSelectSQL = function (query) {
+        var selects = query["_selects"];
+        var distinct = query["_distinct"];
+        var join = query["_join"];
+        var where = query["_where"];
+        var orderBy = query["_orderBy"];
+        var groupBy = query["_groupBy"];
+        var having = query["_having"];
+        var union = query["_union"];
+        var limit = query["_limit"];
+        var isCount = (/count\(distinct\s\S+\)/i).test(selects);
+        var paginated = limit instanceof Array;
         distinct = distinct && !isCount ? "distinct " : "";
-        where = where ? ` where ${where}` : "";
-        orderBy = orderBy ? `order by ${orderBy}` : "";
-        groupBy = groupBy ? ` group by ${groupBy}` : "";
-        having = having ? ` having ${having}` : "";
-        union = union ? ` union ${union}` : "";
-        let sql = "select " + distinct + selects;
+        where = where ? " where " + where : "";
+        orderBy = orderBy ? "order by " + orderBy : "";
+        groupBy = groupBy ? " group by " + groupBy : "";
+        having = having ? " having " + having : "";
+        union = union ? " union " + union : "";
+        var sql = "select " + distinct + selects;
         if (paginated)
-            sql += `, row_number() over(${orderBy}) rn`;
+            sql += ", row_number() over(" + orderBy + ") rn";
         sql += " from " +
             (!join ? query.backquote(query.table) : "") + join + where;
         if (!paginated && orderBy)
-            sql += ` ${orderBy}`;
+            sql += " " + orderBy;
         sql += groupBy + having;
         if (limit) {
             if (paginated) {
-                sql = `select * from (${sql}) tmp where tmp.rn > ${limit[0]} and tmp.rn <= ${limit[0] + limit[1]}`;
+                sql = "select * from (" + sql + ") tmp where tmp.rn > " + limit[0] + " and tmp.rn <= " + (limit[0] + limit[1]);
             }
             else {
-                sql += ` fetch first ${limit} rows only`;
+                sql += " fetch first " + limit + " rows only";
             }
         }
         return sql += union;
-    }
-}
-IbmdbAdapter.Pools = {};
+    };
+    IbmdbAdapter.Pools = {};
+    return IbmdbAdapter;
+}(modelar_1.Adapter));
 exports.IbmdbAdapter = IbmdbAdapter;
 //# sourceMappingURL=index.js.map

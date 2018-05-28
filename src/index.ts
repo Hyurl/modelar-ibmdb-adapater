@@ -52,7 +52,7 @@ export class IbmdbAdapter extends Adapter {
             affected = false;
 
         return new Promise((resolve, reject) => {
-            if (affectCommands.includes(db.command)) {
+            if (affectCommands.indexOf(db.command) >= 0) {
                 let middle = db.command == "delete" ? "old" : "new";
                 sql = `select count(*) as COUNT from ${middle} table (${sql})`;
                 affected = true;
@@ -175,7 +175,7 @@ export class IbmdbAdapter extends Adapter {
             let field = table.schema[key];
 
             if (field.primary && field.autoIncrement) {
-                if (!numbers.includes(field.type.toLowerCase())) {
+                if (numbers.indexOf(field.type.toLowerCase()) === -1) {
                     field.type = "int";
                 }
 
@@ -184,30 +184,31 @@ export class IbmdbAdapter extends Adapter {
                 autoIncrement = null;
             }
 
+            let type = field.type;
             if (field.length instanceof Array) {
-                field.type += "(" + field.length.join(",") + ")";
+                type += "(" + field.length.join(",") + ")";
             } else if (field.length) {
-                field.type += "(" + field.length + ")";
+                type += "(" + field.length + ")";
             }
 
-            let column = table.backquote(field.name) + " " + field.type;
+            let column = table.backquote(field.name) + " " + type;
 
             if (field.primary)
                 primary = field.name;
+
+            if (field.unique)
+                column += " unique";
+
+            if (field.unsigned)
+                column += " unsigned";
+
+            if (field.notNull)
+                column += " not null";
 
             if (field.default === null)
                 column += " default null";
             else if (field.default !== undefined)
                 column += " default " + table.quote(field.default);
-
-            if (field.notNull)
-                column += " not null";
-
-            if (field.unsigned)
-                column += " unsigned";
-
-            if (field.unique)
-                column += " unique";
 
             if (field.comment)
                 column += " comment " + table.quote(field.comment);
@@ -215,7 +216,7 @@ export class IbmdbAdapter extends Adapter {
             if (autoIncrement)
                 column += autoIncrement;
 
-            if (field.foreignKey.table) {
+            if (field.foreignKey && field.foreignKey.table) {
                 let foreign = `foreign key (${table.backquote(field.name)})` +
                     " references " + table.backquote(field.foreignKey.table) +
                     " (" + table.backquote(field.foreignKey.field) + ")" +
@@ -232,7 +233,7 @@ export class IbmdbAdapter extends Adapter {
             " (\n\t" + columns.join(",\n\t");
 
         if (primary)
-            sql += ",\n\tprimary key(" + table.backquote(primary) + ")";
+            sql += ",\n\tprimary key (" + table.backquote(primary) + ")";
 
         if (foreigns.length)
             sql += ",\n\t" + foreigns.join(",\n\t");
