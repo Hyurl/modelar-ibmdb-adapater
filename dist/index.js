@@ -65,6 +65,10 @@ var IbmdbAdapter = (function (_super) {
                     else {
                         db.data = rows;
                         db.affectedRows = rows.length;
+                        for (var _i = 0, rows_1 = rows; _i < rows_1.length; _i++) {
+                            var row = rows_1[_i];
+                            delete row["_rn"];
+                        }
                     }
                     if (db.command === "insert") {
                         _this.connection.query("select identity_val_local() from SYSIBM.SYSDUMMY1", function (err, rows) {
@@ -168,7 +172,11 @@ var IbmdbAdapter = (function (_super) {
                 if (numbers.indexOf(field.type.toLowerCase()) === -1) {
                     field.type = "int";
                 }
-                autoIncrement = " generated always as identity (start with " + field.autoIncrement[0] + ", increment by " + field.autoIncrement[1] + ")";
+                autoIncrement = " generated always as identity (start with "
+                    + field.autoIncrement[0]
+                    + ", increment by "
+                    + field.autoIncrement[1]
+                    + ")";
             }
             else {
                 autoIncrement = null;
@@ -198,22 +206,23 @@ var IbmdbAdapter = (function (_super) {
             if (autoIncrement)
                 column += autoIncrement;
             if (field.foreignKey && field.foreignKey.table) {
-                var foreign = "foreign key (" + table.backquote(field.name) + ")" +
-                    " references " + table.backquote(field.foreignKey.table) +
-                    " (" + table.backquote(field.foreignKey.field) + ")" +
-                    " on delete " + field.foreignKey.onDelete +
-                    " on update " + field.foreignKey.onUpdate;
+                var foreign = "constraint " + table.backquote(field.name + "_frk")
+                    + (" foreign key (" + table.backquote(field.name) + ")")
+                    + " references " + table.backquote(field.foreignKey.table)
+                    + " (" + table.backquote(field.foreignKey.field) + ")"
+                    + " on delete " + field.foreignKey.onDelete
+                    + " on update " + field.foreignKey.onUpdate;
                 foreigns.push(foreign);
             }
             ;
             columns.push(column);
         }
         var sql = "create table " + table.backquote(table.name) +
-            " (\n\t" + columns.join(",\n\t");
+            " (\n  " + columns.join(",\n  ");
         if (primary)
-            sql += ",\n\tprimary key (" + table.backquote(primary) + ")";
+            sql += ",\n  primary key (" + table.backquote(primary) + ")";
         if (foreigns.length)
-            sql += ",\n\t" + foreigns.join(",\n\t");
+            sql += ",\n  " + foreigns.join(",\n  ");
         return sql + "\n)";
     };
     IbmdbAdapter.prototype.limit = function (query, length, offset) {
@@ -245,7 +254,7 @@ var IbmdbAdapter = (function (_super) {
         union = union ? " union " + union : "";
         var sql = "select " + distinct + selects;
         if (paginated)
-            sql += ", row_number() over(" + orderBy + ") rn";
+            sql += ", row_number() over(" + orderBy + ") \"_rn\"";
         sql += " from " +
             (!join ? query.backquote(query.table) : "") + join + where;
         if (!paginated && orderBy)
@@ -253,7 +262,8 @@ var IbmdbAdapter = (function (_super) {
         sql += groupBy + having;
         if (limit) {
             if (paginated) {
-                sql = "select * from (" + sql + ") tmp where tmp.rn > " + limit[0] + " and tmp.rn <= " + (limit[0] + limit[1]);
+                sql = "select * from (" + sql + ") tmp where tmp.\"_rn\" > " + limit[0]
+                    + (" and tmp.\"_rn\" <= " + (limit[0] + limit[1]));
             }
             else {
                 sql += " fetch first " + limit + " rows only";
@@ -265,4 +275,5 @@ var IbmdbAdapter = (function (_super) {
     return IbmdbAdapter;
 }(modelar_1.Adapter));
 exports.IbmdbAdapter = IbmdbAdapter;
+exports.default = IbmdbAdapter;
 //# sourceMappingURL=index.js.map
