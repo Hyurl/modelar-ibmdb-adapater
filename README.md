@@ -3,6 +3,10 @@
 **This is an adapter for [Modelar](https://github.com/hyurl/modelar) to** 
 **connect IBM DB2/Informix database.**
 
+## Prerequisites
+
+- `NodeJS` version higher than 4.0.0.
+
 ## Install
 
 ```sh
