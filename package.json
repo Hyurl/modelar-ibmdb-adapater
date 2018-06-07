@@ -1,7 +1,7 @@
 {
     "name": "modelar-ibmdb-adapter",
-    "version": "3.0.4",
-    "description": "An adapter for Modelar to connect IBM DB2/Informix database.",
+    "version": "3.0.5",
+    "description": "An adapter for Modelar to connect IBM DB2 database.",
     "main": "dist/index.js",
     "types": "src/index.ts",
     "scripts": {
@@ -12,7 +12,6 @@
         "modelar",
         "ibmdb",
         "db2",
-        "informix",
         "adapter"
     ],
     "author": {

@@ -1,7 +1,7 @@
 # Modelar-Ibmdb-Adapter
 
 **This is an adapter for [Modelar](https://github.com/hyurl/modelar) to** 
-**connect IBM DB2/Informix database.**
+**connect IBM DB2 database.**
 
 ## Prerequisites
 
