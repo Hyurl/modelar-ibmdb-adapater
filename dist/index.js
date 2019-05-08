@@ -257,9 +257,9 @@ var IbmdbAdapter = (function (_super) {
             sql += ", row_number() over(" + orderBy + ") \"_rn\"";
         sql += " from " +
             (!join ? query.backquote(query.table) : "") + join + where;
+        sql += groupBy + having + union;
         if (!paginated && orderBy)
             sql += " " + orderBy;
-        sql += groupBy + having;
         if (limit) {
             if (paginated) {
                 sql = "select * from (" + sql + ") tmp where tmp.\"_rn\" > " + limit[0]
@@ -269,7 +269,7 @@ var IbmdbAdapter = (function (_super) {
                 sql += " fetch first " + limit + " rows only";
             }
         }
-        return sql += union;
+        return sql;
     };
     IbmdbAdapter.Pools = {};
     return IbmdbAdapter;

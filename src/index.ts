@@ -289,10 +289,10 @@ export class IbmdbAdapter extends Adapter {
         sql += " from " +
             (!join ? query.backquote(query.table) : "") + join + where;
 
+        sql += groupBy + having + union;
+
         if (!paginated && orderBy)
             sql += ` ${orderBy}`;
-
-        sql += groupBy + having;
 
         if (limit) {
             if (paginated) {
@@ -303,7 +303,7 @@ export class IbmdbAdapter extends Adapter {
             }
         }
 
-        return sql += union;
+        return sql;
     }
 }
 
