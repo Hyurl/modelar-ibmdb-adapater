@@ -9,7 +9,7 @@ function getConnectionString(config: DBConfig): string {
             host: "HOSTNAME",
             port: "PORT",
             user: "UID",
-            password: "PASSWORD",
+            password: "PWD",
         };
 
     for (let key in map) {

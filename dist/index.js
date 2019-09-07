@@ -10,7 +10,7 @@ function getConnectionString(config) {
         host: "HOSTNAME",
         port: "PORT",
         user: "UID",
-        password: "PASSWORD",
+        password: "PWD",
     };
     for (var key in map) {
         if (config[key])
